@@ -1,0 +1,62 @@
+<?php
+
+class Tagcloud extends WireData implements Module {
+    public static $defaultOptions = array (
+        'minSize' => 0.8,
+        'maxSize' => 1.8,
+        'unit' => 'em',
+    );
+
+    public static function getModuleInfo () {
+        return array(
+            'title' => 'Tagcloud',
+            'version' => 001,
+            'summary' => 'Renders a tagcloud',
+            'singular' => false,
+            'autoload' => false
+        );
+    }
+
+    public function init () {
+        /* Maybe we could cache the tag cloud between page edits
+         * Need to look at hooks for that.
+        */
+    }
+
+    public function render(Array $options = null, $tagroot = "/tags") {
+
+        if ($options != null && is_array($options)) {
+            $options = array_merge(self::$defaultOptions, $options);
+        } else {
+            $options = self::$defaultOptions;
+        }
+        $diffFontSize = $options['maxSize'] - $options['minSize'];
+
+        $tags = $this->pages->get($tagroot)->children;
+
+        $items = array();
+        $min = 1e9;
+        $max = -1e9;
+
+        foreach ($tags as $tag) {
+            $count = $this->pages->count('tags=' . $tag);
+
+            $min = min ($min, $count);
+            $max = max ($max, $count);
+
+            $items[$tag->title] = array("count" => $count, "url" => $tag->url);
+        }
+
+        $diff = log($max) - log($min);
+
+        foreach ($items as $tag => $values) {
+            $count = $values["count"];
+            $url = $values["url"];
+            $relative = (log($count) - log($min)) / $diff;
+            $size = $options['minSize'] + $relative * $diffFontSize;
+
+            echo "<a class=\"tag\" href=\"{$url}\" style=\"font-size: {$size}{$options['unit']}\">{$tag}</a> ";
+        }
+    }
+}
+?>
